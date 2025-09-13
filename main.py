@@ -1,8 +1,10 @@
 import os
+import cv2
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 import tempfile
 from deepface import DeepFace
+import numpy as np
 
 # ✅ Force CPU only (ignore GPU)
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -24,9 +26,23 @@ async def verify_face(upload_image: UploadFile = File(...), db_image: UploadFile
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp1, \
              tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp2:
 
-            tmp1.write(await upload_image.read())
-            tmp2.write(await db_image.read())
+            # Read uploaded images
+            upload_bytes = await upload_image.read()
+            db_bytes = await db_image.read()
 
+            # Decode images
+            img1 = cv2.imdecode(np.frombuffer(upload_bytes, np.uint8), cv2.IMREAD_COLOR)
+            img2 = cv2.imdecode(np.frombuffer(db_bytes, np.uint8), cv2.IMREAD_COLOR)
+
+            # Resize images to 160x160 (VGG-Face works with 224x224, Facenet 160x160)
+            img1_resized = cv2.resize(img1, (224, 224))
+            img2_resized = cv2.resize(img2, (224, 224))
+
+            # Save resized images temporarily
+            cv2.imwrite(tmp1.name, img1_resized)
+            cv2.imwrite(tmp2.name, img2_resized)
+
+            # Run DeepFace verification
             result = DeepFace.verify(
                 img1_path=tmp1.name,
                 img2_path=tmp2.name,
