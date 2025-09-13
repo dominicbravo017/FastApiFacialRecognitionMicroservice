@@ -22,33 +22,35 @@ if __name__ == "__main__":
 
 @app.post("/verify")
 async def verify_face(upload_image: UploadFile = File(...), db_image: UploadFile = File(...)):
+    tmp1 = tmp2 = None
     try:
-        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp1, \
-             tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp2:
+        # Create temp files
+        tmp1 = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp2 = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
 
-            # Read uploaded images
-            upload_bytes = await upload_image.read()
-            db_bytes = await db_image.read()
+        # Read uploaded images
+        upload_bytes = await upload_image.read()
+        db_bytes = await db_image.read()
 
-            # Decode images
-            img1 = cv2.imdecode(np.frombuffer(upload_bytes, np.uint8), cv2.IMREAD_COLOR)
-            img2 = cv2.imdecode(np.frombuffer(db_bytes, np.uint8), cv2.IMREAD_COLOR)
+        # Decode images
+        img1 = cv2.imdecode(np.frombuffer(upload_bytes, np.uint8), cv2.IMREAD_COLOR)
+        img2 = cv2.imdecode(np.frombuffer(db_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-            # Resize images to 160x160 (VGG-Face works with 224x224, Facenet 160x160)
-            img1_resized = cv2.resize(img1, (224, 224))
-            img2_resized = cv2.resize(img2, (224, 224))
+        # Resize images to 160x160 (for Facenet)
+        img1_resized = cv2.resize(img1, (160, 160))
+        img2_resized = cv2.resize(img2, (160, 160))
 
-            # Save resized images temporarily
-            cv2.imwrite(tmp1.name, img1_resized)
-            cv2.imwrite(tmp2.name, img2_resized)
+        # Save resized images temporarily
+        cv2.imwrite(tmp1.name, img1_resized)
+        cv2.imwrite(tmp2.name, img2_resized)
 
-            # Run DeepFace verification
-            result = DeepFace.verify(
-                img1_path=tmp1.name,
-                img2_path=tmp2.name,
-                model_name="VGG-Face",
-                enforce_detection=False
-            )
+        # Run DeepFace verification
+        result = DeepFace.verify(
+            img1_path=tmp1.name,
+            img2_path=tmp2.name,
+            model_name="Facenet",
+            enforce_detection=False
+        )
 
         return JSONResponse({
             "verified": result.get("verified"),
@@ -59,6 +61,16 @@ async def verify_face(upload_image: UploadFile = File(...), db_image: UploadFile
 
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
+    finally:
+        # Clean up temporary files
+        if tmp1:
+            tmp1.close()
+            os.remove(tmp1.name)
+        if tmp2:
+            tmp2.close()
+            os.remove(tmp2.name)
+
 
 
 # @app.post("/verify")
