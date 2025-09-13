@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # disable GPU
 import cv2
@@ -47,8 +47,8 @@ async def verify_face(
     """
     Compare DB image (from Django) with client-uploaded image using DeepFace.
     """
-
     try:
+        # Save DB image
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as db_file:
             db_bytes = await db_image.read()
             np_arr = np.frombuffer(db_bytes, np.uint8)
@@ -56,18 +56,23 @@ async def verify_face(
             cv2.imwrite(db_file.name, db_img)
             db_path = db_file.name
 
+        # Save Client image
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as client_file:
             client_bytes = await client_image.read()
             client_file.write(client_bytes)
             client_path = client_file.name
 
+        # Run DeepFace verification
         result = DeepFace.verify(
             img1_path=db_path,
             img2_path=client_path,
-            model_name="Facenet",  # model choice can be adjusted
-            detector_backend="opencv", # detector choice can be adjusted
-            enforce_detection=False
+            enforce_detection=False,
+            model_name="Facenet"  # faster model
         )
+
+        # Clean up
+        os.remove(db_path)
+        os.remove(client_path)
 
         return JSONResponse({
             "verified": result.get("verified"),
