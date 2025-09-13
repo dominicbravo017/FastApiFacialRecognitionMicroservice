@@ -66,8 +66,7 @@ async def verify_face(
         result = DeepFace.verify(
             img1_path=db_path,
             img2_path=client_path,
-            enforce_detection=False,
-            model_name="Facenet"  # faster model
+            enforce_detection=False
         )
 
         # Clean up
