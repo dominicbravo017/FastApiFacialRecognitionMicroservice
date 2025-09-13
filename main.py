@@ -30,7 +30,7 @@ async def verify_face(upload_image: UploadFile = File(...), db_image: UploadFile
             result = DeepFace.verify(
                 img1_path=tmp1.name,
                 img2_path=tmp2.name,
-                model_name="Facenet512",
+                model_name="VGG-Face",
                 enforce_detection=False
             )
 
