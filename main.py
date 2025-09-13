@@ -64,8 +64,6 @@ async def verify_face(
         result = DeepFace.verify(
             img1_path=db_path,
             img2_path=client_path,
-            model_name="Facenet",  # model choice can be adjusted
-            detector_backend="opencv", # detector choice can be adjusted
             enforce_detection=False
         )
 
